@@ -27,7 +27,7 @@ class render:
         L = snapshot.configuration.box[0]
         scene = fresnel.Scene(self.device)
         geometry = fresnel.geometry.Sphere(
-            scene, N=len(snapshot.particles.position), radius=0.3
+            scene, N=len(snapshot.particles.position), radius=0.5
         )
         geometry.material = fresnel.material.Material(
             color=fresnel.color.linear([252 / 255, 209 / 255, 1 / 255]), roughness=0.5
