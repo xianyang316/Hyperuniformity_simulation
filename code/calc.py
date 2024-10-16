@@ -1,5 +1,5 @@
 import numpy as np
-import math
+from scipy.interpolate import UnivariateSpline
 import matplotlib.pyplot as plt
 from scipy.special import j0, j1, gamma
 class Hyperuniform_helper:
@@ -8,7 +8,7 @@ class Hyperuniform_helper:
         self.positions = positions #  positions of particles in box
         self.center_pos = center_pos #  origin selected
         self.bulk_density = rho #  density in the box
-    
+
     def set_radius(self, new_radius):
         self.radius = new_radius
 
@@ -37,6 +37,12 @@ class Hyperuniform_helper:
         # Normalize counts to compute g(r)
         gr[1:] = counts / (shell_volumes * self.bulk_density)
         return r_values, gr 
+    
+    def g_fit(self, r_data, g_data):
+        spline = UnivariateSpline(r_data, g_data, s=0)
+        r_fine = np.linspace(min(r_data), max(r_data), 1001)
+        g_spline = spline(r_fine)
+        return r_fine, g_spline
     
     def hankel_transform_2d(self, gr, r, k_values):
         hk = np.zeros(len(k_values))
