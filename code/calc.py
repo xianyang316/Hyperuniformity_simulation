@@ -12,6 +12,9 @@ class Hyperuniform_helper:
     def set_radius(self, new_radius):
         self.radius = new_radius
 
+    def set_positions(self, new_pos):
+        self.positions = new_pos
+
     def select_from_spherial_window(self):
         # this function selects all positions within a hyperspherical window
         squared_distances = np.sum((self.positions - self.center_pos)**2, axis=1)
