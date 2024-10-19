@@ -1,16 +1,19 @@
 import numpy as np
-import math
-from scipy.special import j0, j1
-
+from scipy.interpolate import UnivariateSpline
+import matplotlib.pyplot as plt
+from scipy.special import j0, j1, gamma
 class Hyperuniform_helper:
     def __init__(self, w_radius, center_pos, positions, rho):
         self.radius = w_radius #  radius of spherical window
         self.positions = positions #  positions of particles in box
         self.center_pos = center_pos #  origin selected
         self.bulk_density = rho #  density in the box
-    
+
     def set_radius(self, new_radius):
         self.radius = new_radius
+
+    def set_positions(self, new_pos):
+        self.positions = new_pos
 
     def select_from_spherial_window(self):
         # this function selects all positions within a hyperspherical window
@@ -23,36 +26,43 @@ class Hyperuniform_helper:
         selected_pos = self.select_from_spherial_window()
         distances = np.sort(np.linalg.norm(selected_pos-self.center_pos, axis=1))
         r_values = np.linspace(0, self.radius, num_bins+1)
-        gr = np.zeros_like(r_values[:-1])
+        gr = np.zeros_like(r_values)
 
-        idx = 0
-        shell_volume = 0
-        self.bulk_density = len(selected_pos)/(np.pi*self.radius**2)
-        if d % 2 == 0:
-            self.bulk_density = len(selected_pos)/((np.pi)**(d/2) * (self.radius**d) / math.factorial(d-1))
-        else:
-            self.bulk_density = (np.pi)**(d/2) * (self.radius**d) / (math.factorial(d+1)/(4**(d/2+1/2)*math.factorial(int(d/2+1/2)))*np.pi**0.5)
-        for i in range(len(r_values) - 1):
-            count = np.sum((distances[idx+1:] >= r_values[i]) & (distances[idx+1:] <= r_values[i+1]))
-            idx += count
-            gr[i] = count
+        self.bulk_density = len(selected_pos)/(np.pi**(d/2)*self.radius**d/gamma(1+d/2))
+        #r_centers = (r_values[:-1] + r_values[1:]) / 2
 
-            # calculate d-dimensional sphere volumes
-            if d % 2 == 0:
-                shell_volume = (np.pi)**(d/2) * (-r_values[i]**d + r_values[i+1]**d) / math.factorial(d-1)
-            else:
-                shell_volume = (np.pi)**(d/2) * (-r_values[i]**d + r_values[i+1]**d) / (math.factorial(d+1)/(4**(d/2+1/2)*math.factorial(int(d/2+1/2)))*np.pi**0.5)
+        # Compute counts in each bin using np.histogram
+        counts, _ = np.histogram(distances, bins=r_values)
 
-            # Normalize by shell volume and bulk density
-            gr[i] = count / (shell_volume * self.bulk_density)
-        return r_values[:-1], gr 
+        # Compute shell volumes for each bin
+        shell_volumes = np.pi**(d / 2) * (r_values[1:]**d - r_values[:-1]**d) / gamma(1 + d / 2)
+
+        # Normalize counts to compute g(r)
+        gr[1:] = counts / (shell_volumes * self.bulk_density)
+        return r_values, gr 
+    
+    def g_fit(self, r_data, g_data):
+        spline = UnivariateSpline(r_data, g_data, s=0)
+        r_fine = np.linspace(min(r_data), max(r_data), 5*len(r_data))
+        g_spline = spline(r_fine)
+        return r_fine, g_spline
     
     def hankel_transform_2d(self, gr, r, k_values):
         hk = np.zeros(len(k_values))
+        delta_r = np.diff(r)[0]
         for i in range(len(k_values)):
-            hk[i] = 2*np.pi*np.sum(r*(gr-1)*j0(k_values[i]*r))
+            integrand = r*(gr-1)*j0(k_values[i]*r)
+            hk[i] = 2*np.pi*np.trapezoid(integrand, r, dx=delta_r)
         return 1+self.bulk_density*hk
     
+    def variance_calculation_in_real_space(self, r, gr):
+        delta_r = np.diff(r)[0]
+        window_intersection = 2/np.pi*(np.acos(r/(2*self.radius))-r/(2*self.radius)*(1-r**2/(4*self.radius**2))**0.5)
+        integrand = r*(gr-1)*window_intersection
+        return self.bulk_density*np.pi*self.radius**2*(1+self.bulk_density*2*np.pi*np.trapezoid(integrand, r, dx=delta_r))
+    
     def variance_calculations_in_reciprocal_space_2d(self, sk, k):
-        variance_square = self.bulk_density*(1/(2*np.pi)**2*np.sum(sk*2**2*np.pi*1*j1(k*self.radius)**2/(k**2)))
+        delta_k = np.diff(k)[0]  # Assuming uniform spacing
+        integrand = k*sk*(2**2*np.pi*gamma(2)*j1(k*self.radius)**2/k**2)
+        variance_square = self.bulk_density*np.pi*self.radius**2*(1/(2*np.pi)*np.trapezoid(integrand, k, dx=delta_k))
         return variance_square
