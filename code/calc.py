@@ -47,6 +47,20 @@ class Hyperuniform_helper:
         g_spline = spline(r_fine)
         return r_fine, g_spline
     
+    def Fourier_transform_2d(self, gr):
+    # Subtract 1 to obtain h(r) from g(r)
+        hr = gr - 1
+        h_r_neg = hr[::-1]      # Mirror the h(r) data
+
+        h_r_full = np.concatenate((h_r_neg, hr))
+
+        # Compute the 1D Fourier transform
+        hk = np.fft.fftshift(np.fft.fft(np.fft.ifftshift(h_r_full)))
+
+        Sk = 1 + np.real(hk)
+
+        return Sk
+    
     def hankel_transform_2d(self, gr, r, k_values):
         hk = np.zeros(len(k_values))
         delta_r = np.diff(r)[0]
