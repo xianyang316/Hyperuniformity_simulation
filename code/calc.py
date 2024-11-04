@@ -43,7 +43,7 @@ class Hyperuniform_helper:
     
     def g_fit(self, r_data, g_data):
         spline = UnivariateSpline(r_data, g_data, s=0)
-        r_fine = np.linspace(min(r_data), max(r_data), 5*len(r_data))
+        r_fine = np.linspace(min(r_data), max(r_data), 1*len(r_data))
         g_spline = spline(r_fine)
         return r_fine, g_spline
     
