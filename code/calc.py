@@ -25,7 +25,7 @@ class Hyperuniform_helper:
         # This function calculates a discrete g(r) at 0<=r<=R
         selected_pos = self.select_from_spherial_window()
         distances = np.sort(np.linalg.norm(selected_pos-self.center_pos, axis=1))
-        r_values = np.linspace(0, self.radius, num_bins+1)
+        r_values = np.linspace(0.0001, self.radius, num_bins+1)
         gr = np.zeros_like(r_values)
 
         self.bulk_density = len(selected_pos)/(np.pi**(d/2)*self.radius**d/gamma(1+d/2))
